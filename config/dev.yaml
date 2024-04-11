@@ -1,0 +1,10 @@
+http:
+  host: "localhost"
+  port: "8081"
+
+db:
+  host: "localhost"
+  port: "3306"
+  schema: "python_de"
+  username: ""
+  password: ""
