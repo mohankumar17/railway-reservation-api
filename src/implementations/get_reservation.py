@@ -1,9 +1,10 @@
 import pandas as pd
 from time import strftime
+from utils.global_config import config, logger
 from utils.database_connection import database_connect
 from utils.custom_exception import RESERVATION_NOT_FOUND
 
-def get_reservations_by_id(reservationId, config):
+def get_reservations_by_id(reservationId):
 
     dbConn = database_connect(config)
 
@@ -11,6 +12,7 @@ def get_reservations_by_id(reservationId, config):
     result_df = pd.read_sql(sql=selectQuery, con=dbConn)
 
     if result_df.shape[0] == 0:
+        dbConn.close()
         raise RESERVATION_NOT_FOUND(f"No reservation details found for ID: {reservationId}")
     else:
         response = {
@@ -25,5 +27,7 @@ def get_reservations_by_id(reservationId, config):
             "trainId": result_df.at[0, 'train_id']
         }
         status_code = 200
+    
+    dbConn.close()
 
     return response, status_code

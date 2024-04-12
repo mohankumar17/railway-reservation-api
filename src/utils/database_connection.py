@@ -1,6 +1,7 @@
 import mysql.connector as db
+from utils.global_config import config
 
-def database_connect(config):
+def database_connect():
         
     host = config["db"]["host"]
     port = config["db"]["port"]
