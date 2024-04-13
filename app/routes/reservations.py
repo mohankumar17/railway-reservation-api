@@ -1,22 +1,29 @@
-from flask import Flask, request
+from flask import Blueprint, request
 import time
 import uuid
-from utils.global_config import logger,config
-from implementations.get_reservation import get_reservations_by_id
-from implementations.create_reservation import create_reservations
-from utils.custom_exception import RESERVATION_NOT_FOUND
+from app.config import Config
 
-app = Flask(__name__)
+from app.services.create_reservation import create_reservations
+from app.services.get_reservation import get_reservations_by_id, get_reservations_by_status
+from app.utils.custom_exception import RESERVATION_NOT_FOUND
+
+reservations_bp = Blueprint('reservations', __name__)
+logger = Config.logger
 
 # Routers
-@app.get("/api/reservations/<reservationId>")
-def get_reservations_route(reservationId):
+@reservations_bp.get("/api/reservations/<reservationId>")
+def get_reservations_id_route(reservationId):
     return get_reservations_by_id(reservationId)
 
-@app.post("/api/reservations")
+@reservations_bp.get("/api/reservations")
+def get_reservations_status_route():
+    return get_reservations_by_status(request)
+
+@reservations_bp.post("/api/reservations")
 def create_reservations_route():
     return create_reservations(request)
 
+############################################################################
 '''
 Error Handling
     - Global Error Handler: 500
@@ -35,7 +42,7 @@ def error_response(errorDetails):
     logger.error(error_response)
     return error_response
 
-@app.errorhandler(Exception)
+@reservations_bp.errorhandler(Exception)
 def global_error_handler(error):
     errorDetails = {
         "message": "Reservation server error",
@@ -45,7 +52,7 @@ def global_error_handler(error):
     response = error_response(errorDetails)
     return response, status_code
 
-@app.errorhandler(RESERVATION_NOT_FOUND)
+@reservations_bp.errorhandler(RESERVATION_NOT_FOUND)
 def not_found_error_handler(error):
     errorDetails = {
         "message": "Reservation entry not found",
@@ -55,5 +62,3 @@ def not_found_error_handler(error):
     response = error_response(errorDetails)
     return response, status_code
 
-if __name__ == '__main__':
-   app.run(host=config["http"]["host"], port=config["http"]["port"], debug=True)

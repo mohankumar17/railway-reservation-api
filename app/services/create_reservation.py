@@ -1,7 +1,5 @@
-import pandas as pd
 import time
-from utils.global_config import logger
-from utils.database_connection import database_connect
+from app.utils.database_connection import database_connect
 
 def create_reservations(request):
 
