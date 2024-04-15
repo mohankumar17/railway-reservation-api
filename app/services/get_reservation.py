@@ -13,28 +13,28 @@ def get_reservations_db(selectQuery):
         dbConn.close()
         raise RESERVATION_NOT_FOUND(f"No reservation details found")
     else:
-        result_df = df.groupby(by='reservation_id').agg(lambda x: list(x))
+        df = df.groupby(by='reservation_id').agg(lambda x: list(x))
 
         response = list(map(lambda reservationId: {
             "reservationId": int(reservationId),
-            "reservationDate": result_df.at[reservationId,"reservation_date"][0],
-            "travelDate": None if result_df.at[reservationId, 'travel_date'][0] is None else result_df.at[reservationId, 'travel_date'][0].strftime("%Y-%m-%d"),
-            "sourceStation": result_df.at[reservationId, 'source_station'][0],
-            "destinationStation": result_df.at[reservationId, 'destination_station'][0],
-            "paymentMethod": result_df.at[reservationId, 'payment_method'][0],
-            "totalFare": float(result_df.at[reservationId, 'total_fare'][0]),
-            "status": result_df.at[reservationId, 'booking_status'][0],
-            "trainId": result_df.at[reservationId, 'train_id'][0],
+            "reservationDate": df.at[reservationId,"reservation_date"][0],
+            "travelDate": None if df.at[reservationId, 'travel_date'][0] is None else df.at[reservationId, 'travel_date'][0].strftime("%Y-%m-%d"),
+            "sourceStation": df.at[reservationId, 'source_station'][0],
+            "destinationStation": df.at[reservationId, 'destination_station'][0],
+            "paymentMethod": df.at[reservationId, 'payment_method'][0],
+            "totalFare": float(df.at[reservationId, 'total_fare'][0]),
+            "status": df.at[reservationId, 'booking_status'][0],
+            "trainId": df.at[reservationId, 'train_id'][0],
             "passengers": list(map(lambda passenger: {
-                "passengerId": result_df.at[reservationId, 'passenger_id'][passenger],
-                "name": result_df.at[reservationId, 'name'][passenger],
-                "age": result_df.at[reservationId,"age"][passenger],
-                "gender": result_df.at[reservationId,"gender"][passenger],
-                "coachNumber": result_df.at[reservationId,"coach_no"][passenger],
-                "seatNumber": result_df.at[reservationId,"seat_no"][passenger],
-                "classType": result_df.at[reservationId,"class_type"][passenger]
-            }, range(len(result_df.at[reservationId, 'passenger_id']))))
-        },result_df.index))
+                "passengerId": df.at[reservationId, 'passenger_id'][passenger],
+                "name": df.at[reservationId, 'name'][passenger],
+                "age": df.at[reservationId,"age"][passenger],
+                "gender": df.at[reservationId,"gender"][passenger],
+                "coachNumber": df.at[reservationId,"coach_no"][passenger],
+                "seatNumber": df.at[reservationId,"seat_no"][passenger],
+                "classType": df.at[reservationId,"class_type"][passenger]
+            }, range(len(df.at[reservationId, 'passenger_id']))))
+        },df.index))
     
     dbConn.close()
     return response
