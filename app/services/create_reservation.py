@@ -1,6 +1,7 @@
 import time
 from app.utils.database_connection import database_connect
 from app.utils.custom_exception import MIMETYPE_NOT_SUPPORTED
+from app.utils.validation_models import Reservation, Passenger
 
 def create_reservations(request):
 
@@ -9,42 +10,52 @@ def create_reservations(request):
     else:
         raise MIMETYPE_NOT_SUPPORTED(f"Request Body's Media Type is not supported. Reservation system accepts only application/json MIME Type")
 
+    passengersList = list(map(lambda passenger: Passenger(passengerId=passenger.get("passengerId"),
+                                                          name=passenger.get("name"),
+                                                          age=passenger.get("age"),
+                                                          gender=passenger.get("gender"),
+                                                          classType=passenger.get("classType"),
+                                                          coachNumber=passenger.get("coachNumber"), 
+                                                          seatNumber=passenger.get("seatNumber")),
+                                                        request_body.get("passengers")))
+    
+    reservation = Reservation(travelDate=request_body.get("travelDate"),
+                              sourceStation=request_body.get("sourceStation"),
+                              destinationStation=request_body.get("destinationStation"),
+                              paymentMethod=request_body.get("paymentMethod"),
+                              totalFare=request_body.get("totalFare"),
+                              status="NotConfirmed" if request_body.get("status") is None else request_body.get("status"),
+                              trainId=request_body.get("trainId"),
+                              passengers=passengersList)
+    
+
     dbConn = database_connect()
     dbCurr = dbConn.cursor()
-
-    reservation_data = {	
-        "reservationDate": time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime()),
-        "travelDate": request_body.get("travelDate"),
-        "sourceStation": request_body.get("sourceStation"),
-        "destinationStation": request_body.get("destinationStation"),
-        "paymentMethod": request_body.get("paymentMethod"),
-        "totalFare": request_body.get("totalFare"),
-        "bookingStatus": "NotConfirmed" if request_body.get("status") is None else request_body.get("status"),
-        "trainId": request_body.get("trainId")
-    }
     
     reservationInsertQuery = f"""
     INSERT INTO RAILWAY_RESERVATIONS(reservation_date,travel_date,source_station,\
     destination_station,payment_method,total_fare,booking_status,train_id)\
-    VALUES('{reservation_data.get("reservationDate")}','{reservation_data.get("travelDate")}',\
-    '{reservation_data.get("sourceStation")}','{reservation_data.get("destinationStation")}',\
-    '{reservation_data.get("paymentMethod")}',{reservation_data.get("totalFare")},\
-    '{reservation_data.get("bookingStatus")}','{reservation_data.get("trainId")}')\
+    VALUES('{reservation.reservationDate}','{reservation.travelDate}',\
+    '{reservation.sourceStation}','{reservation.destinationStation}',\
+    '{reservation.paymentMethod}',{reservation.totalFare},\
+    '{reservation.status}','{reservation.trainId}')\
     """
 
     dbCurr.execute(reservationInsertQuery)
 
     reservationId = dbCurr.lastrowid
     
-    columns = ['reservation_id','passenger_id','name','age','gender','coach_no','seat_no','class_type']
-    passengers_data = list(map(lambda passenger: [reservationId, passenger.get("passengerId"), passenger.get("name"), passenger.get("age"), passenger.get("gender"), passenger.get("coachNumber"), passenger.get("seatNumber"), passenger.get("classType")], request_body.get("passengers")))
+    passengers_columns = ['reservation_id','passenger_id','name','age','gender','class_type','coach_no','seat_no']
+    passengers = list(map(lambda passenger: [reservationId, passenger.passengerId, passenger.name, passenger.age, passenger.gender,
+                                             passenger.classType, passenger.coachNumber, passenger.seatNumber],
+                                        reservation.passengers))
     
     passengersInsertQuery = f"""
-    INSERT INTO TICKET_PASSENGER_DETAILS({','.join(columns)})\
-    VALUES({('%s,'*len(columns))[:-1]})\
+    INSERT INTO TICKET_PASSENGER_DETAILS({','.join(passengers_columns)})\
+    VALUES({('%s,'*len(passengers_columns))[:-1]})\
     """
 
-    dbCurr.executemany(passengersInsertQuery, passengers_data)
+    dbCurr.executemany(passengersInsertQuery, passengers)
     dbConn.commit()
 
     response = {

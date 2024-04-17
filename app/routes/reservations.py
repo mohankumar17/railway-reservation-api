@@ -8,6 +8,7 @@ from app.services.get_reservation import get_reservations_by_id, get_reservation
 from app.services.update_reservation import update_reservations
 from app.services.delete_reservation import delete_reservations
 from app.utils.custom_exception import RESERVATION_NOT_FOUND, MIMETYPE_NOT_SUPPORTED
+from pydantic import ValidationError
 
 reservations_bp = Blueprint('reservations', __name__)
 logger = Config.logger
@@ -44,8 +45,8 @@ Error Handling
 # Error Handling 
 def error_response(errorDetails):
     error_response =  {
-        "message": errorDetails["message"],
-        "description": errorDetails["description"],
+        "message": errorDetails.get("message"),
+        "description": errorDetails.get("description"),
         "dateTime": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime()),
         "transactionId": str(uuid.uuid4())
     }
@@ -82,3 +83,12 @@ def mediatype_error_handler(error):
     response = error_response(errorDetails)
     return response, status_code
 
+@reservations_bp.errorhandler(ValidationError)
+def validation_error_handler(error):
+    errorDetails = {
+        "message": "Input data validation failed",
+        "description": str(error)
+    }
+    status_code = 400
+    response = error_response(errorDetails)
+    return response, status_code

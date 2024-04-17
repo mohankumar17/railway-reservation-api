@@ -1,6 +1,7 @@
 import time
 from app.utils.database_connection import database_connect
 from app.utils.custom_exception import RESERVATION_NOT_FOUND, MIMETYPE_NOT_SUPPORTED
+from app.utils.validation_models import Reservation, Passenger
 
 def update_reservations(request, reservationId):
 
@@ -8,31 +9,40 @@ def update_reservations(request, reservationId):
         request_body = request.json
     else:
         raise MIMETYPE_NOT_SUPPORTED(f"Request Body's Media Type is not supported. Reservation system accepts only application/json MIME Type")
+    
+    updatedOn = time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime())
 
+    passengersList = list(map(lambda passenger: Passenger(passengerId=passenger.get("passengerId"),
+                                                          name=passenger.get("name"),
+                                                          age=passenger.get("age"),
+                                                          gender=passenger.get("gender"),
+                                                          classType=passenger.get("classType"),
+                                                          coachNumber=passenger.get("coachNumber"), 
+                                                          seatNumber=passenger.get("seatNumber")),
+                                                        request_body.get("passengers")))
+    
+    reservation = Reservation(travelDate=request_body.get("travelDate"),
+                              sourceStation=request_body.get("sourceStation"),
+                              destinationStation=request_body.get("destinationStation"),
+                              paymentMethod=request_body.get("paymentMethod"),
+                              totalFare=request_body.get("totalFare"),
+                              status="NotConfirmed" if request_body.get("status") is None else request_body.get("status"),
+                              trainId=request_body.get("trainId"),
+                              passengers=passengersList)
+    
     dbConn = database_connect()
     dbCurr = dbConn.cursor()
 
-    reservation_data = {
-        "updatedOn": time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime()),
-        "travelDate": request_body.get("travelDate"),
-        "sourceStation": request_body.get("sourceStation"),
-        "destinationStation": request_body.get("destinationStation"),
-        "paymentMethod": request_body.get("paymentMethod"),
-        "totalFare": request_body.get("totalFare"),
-        "bookingStatus": "NotConfirmed" if request_body.get("status") is None else request_body.get("status"),
-        "trainId": request_body.get("trainId")
-    }
-    
     reservationUpdateQuery = f"""
     UPDATE RAILWAY_RESERVATIONS\
-    SET payment_method='{reservation_data.get("paymentMethod")}',\
-	total_fare={reservation_data.get("totalFare")},\
-	booking_status='{reservation_data.get("bookingStatus")}',\
-	train_id='{reservation_data.get("trainId")}',\
-	travel_date='{reservation_data.get("travelDate")}',\
-	source_station='{reservation_data.get("sourceStation")}',\
-	destination_station='{reservation_data.get("destinationStation")}',\
-	updated_on='{reservation_data.get("updatedOn")}'\
+    SET payment_method='{reservation.paymentMethod}',\
+	total_fare={reservation.totalFare},\
+	booking_status='{reservation.status}',\
+	train_id='{reservation.trainId}',\
+	travel_date='{reservation.travelDate}',\
+	source_station='{reservation.sourceStation}',\
+	destination_station='{reservation.destinationStation}',\
+	updated_on='{updatedOn}'\
     WHERE reservation_id={reservationId}\
     """
 
@@ -44,16 +54,19 @@ def update_reservations(request, reservationId):
         dbConn.close()
         raise RESERVATION_NOT_FOUND(f"Reservation with ID: {reservationId} is not found in the system")
     
-    columns = ['name','age','gender','coach_no','seat_no','class_type','updated_on']
-    passengers_data = list(map(lambda passenger: [passenger.get("name"), passenger.get("age"), passenger.get("gender"), passenger.get("coachNumber"), passenger.get("seatNumber"), passenger.get("classType"), reservation_data.get("updatedOn"), passenger.get("passengerId")], request_body.get("passengers")))
+    passenger_columns = ['name','age','gender','class_type','coach_no','seat_no','updated_on']
+    passengers = list(map(lambda passenger: [passenger.name, passenger.age, passenger.gender,
+                                             passenger.classType, passenger.coachNumber, passenger.seatNumber,
+                                             updatedOn, passenger.passengerId],
+                                        reservation.passengers))
 
     passengersUpdateQuery = f"""
     UPDATE TICKET_PASSENGER_DETAILS\
-    SET {','.join((col + '=%s') for col in columns)}\
+    SET {','.join((col + '=%s') for col in passenger_columns)}\
     WHERE reservation_id={reservationId} AND passenger_id=%s\
     """
 
-    dbCurr.executemany(passengersUpdateQuery, passengers_data)
+    dbCurr.executemany(passengersUpdateQuery, passengers)
     dbConn.commit()
 
     response = {
