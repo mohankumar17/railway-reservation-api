@@ -1,7 +1,6 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 import time
 import uuid
-from app.config import Config
 
 from app.services.create_reservation import create_reservations
 from app.services.get_reservation import get_reservations_by_id, get_reservations_by_status
@@ -11,7 +10,6 @@ from app.utils.custom_exception import RESERVATION_NOT_FOUND, MIMETYPE_NOT_SUPPO
 from pydantic import ValidationError
 
 reservations_bp = Blueprint('reservations', __name__)
-logger = Config.logger
 
 # Routers
 @reservations_bp.get("/api/reservations/<reservationId>")
@@ -50,7 +48,7 @@ def error_response(errorDetails):
         "dateTime": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime()),
         "transactionId": str(uuid.uuid4())
     }
-    logger.error(error_response)
+    current_app.logger.error(error_response)
     return error_response
 
 @reservations_bp.errorhandler(Exception)

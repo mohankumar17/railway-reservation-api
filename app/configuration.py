@@ -1,5 +1,4 @@
 import yaml
-import logging
 
 class Config:
     with open("config/dev.yaml") as config_file:
@@ -13,6 +12,3 @@ class Config:
     DB_SCHEMA = properties["db"]["schema"]
     DB_USERNAME = properties["db"]["username"]
     DB_PASSWORD = properties["db"]["password"]
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)

@@ -1,13 +1,13 @@
 import mysql.connector as db
-from app.config import Config
+from flask import current_app
 
 def database_connect():
 
-    host = Config.DB_HOST
-    port = Config.DB_PORT
-    schema = Config.DB_SCHEMA
-    username = Config.DB_USERNAME
-    password = Config.DB_PASSWORD
+    host = current_app.config.get("DB_HOST")
+    port = current_app.config.get("DB_PORT")
+    schema = current_app.config.get("DB_SCHEMA")
+    username = current_app.config.get("DB_USERNAME")
+    password = current_app.config.get("DB_PASSWORD")
 
     dbConn = db.connect(host = host, port = port, user = username, passwd = password, database = schema)
 
